@@ -335,11 +335,12 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 300,
-            system: MODES[mode].system,
-            messages: history
-          })
+          model: 'gpt-4o',
+          max_tokens: 300,
+          messages: [
+            { role: 'system', content: MODES[mode].system },
+            ...history
+          ]
         });
         const data = await res.json();
         const reply = data.content.map(b => b.text || '').join('');
