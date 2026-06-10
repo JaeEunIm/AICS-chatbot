@@ -317,7 +317,6 @@
       const el = document.getElementById('typing-indicator');
       if (el) el.remove();
     }
-
     async function sendMsg() {
       if (isLoading) return;
       const input = document.getElementById('user-input');
@@ -335,15 +334,16 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-          model: 'gpt-4o',
-          max_tokens: 300,
-          messages: [
-            { role: 'system', content: MODES[mode].system },
-            ...history
-          ]
+            model: 'gpt-4o',
+            max_tokens: 300,
+            messages: [
+              { role: 'system', content: MODES[mode].system },
+              ...history
+            ]
+          })  // ← 이 괄호가 빠져 있었어요
         });
         const data = await res.json();
-        const reply = data.content.map(b => b.text || '').join('');
+        const reply = data.choices[0].message.content;  // ← OpenAI 응답 방식
         history.push({ role: 'assistant', content: reply });
         removeTyping();
         addBotMsg(reply);
@@ -354,6 +354,7 @@
       isLoading = false;
       document.getElementById('send-btn').disabled = false;
     }
+
 
     setMode('task');
   </script>
