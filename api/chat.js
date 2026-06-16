@@ -19,11 +19,13 @@ export default async function handler(req, res) {
     const {
       model,
       messages,
+      max_completion_tokens,
       max_tokens,
       participantId,
       condition,
       pageMode,
-      userMessage
+      userMessage,
+      storageKey
     } = req.body;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -35,7 +37,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model,
         messages,
-        max_tokens
+        max_completion_tokens: max_completion_tokens || max_tokens || 300
       })
     });
 
@@ -56,7 +58,8 @@ export default async function handler(req, res) {
           pageMode: pageMode || '',
           userMessage: userMessage || '',
           botReply,
-          model: model || ''
+          model: model || '',
+          storageKey: storageKey || ''
         };
 
         await Promise.race([
