@@ -274,7 +274,6 @@
       const group = document.createElement('div');
       group.className = `msg-group bot ${mode}`;
       group.innerHTML = `
-        <div class="bot-label">${MODES[mode].name}</div>
         <div class="msg-row">
           <div class="avatar">${MODES[mode].avatar}</div>
           <div class="bubble">${text.replace(/\n/g, '<br>')}</div>
@@ -301,7 +300,6 @@
       group.className = `msg-group bot ${mode}`;
       group.id = 'typing-indicator';
       group.innerHTML = `
-        <div class="bot-label">${MODES[mode].name}</div>
         <div class="msg-row">
           <div class="avatar">${MODES[mode].avatar}</div>
           <div class="bubble"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
@@ -332,7 +330,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: MODEL,
-            max_tokens: 300,
+            max_completion_tokens: 300,
             participantId: participantId,
             condition: conditionFromUrl || mode,
             pageMode: mode,
