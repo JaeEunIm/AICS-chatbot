@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Task AI Chatbot</title>
+  <title>Task Chatbot</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -35,43 +35,6 @@
       overflow: hidden;
     }
 
-    /* ── MODE BAR ── */
-    #mode-bar {
-      display: flex;
-      gap: 6px;
-      padding: 14px 16px 10px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-
-    .mode-btn {
-      flex: 1;
-      padding: 8px 10px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--text-muted);
-      font-family: var(--font);
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-
-    .mode-btn:hover { border-color: var(--border-strong); color: var(--text); }
-
-    .mode-btn.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #f9f8f6;
-    }
-
-    /* ── CHAT WINDOW ── */
     #chat-window {
       flex: 1;
       overflow-y: auto;
@@ -86,18 +49,9 @@
     #chat-window::-webkit-scrollbar-track { background: transparent; }
     #chat-window::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-    /* ── MESSAGES ── */
     .msg-group { display: flex; flex-direction: column; gap: 3px; }
     .msg-group.user { align-items: flex-end; }
     .msg-group.bot { align-items: flex-start; }
-
-    .bot-label {
-      font-size: 11px;
-      color: var(--text-hint);
-      letter-spacing: 0.03em;
-      padding-left: 40px;
-      margin-bottom: 2px;
-    }
 
     .msg-row { display: flex; gap: 8px; align-items: flex-end; }
     .msg-group.user .msg-row { flex-direction: row-reverse; }
@@ -122,6 +76,7 @@
       line-height: 1.65;
       border-radius: var(--radius);
       border: 1px solid var(--border);
+      overflow-wrap: anywhere;
     }
 
     .msg-group.bot .bubble {
@@ -142,7 +97,6 @@
       border-radius: var(--radius) var(--radius) 4px var(--radius);
     }
 
-    /* ── TYPING INDICATOR ── */
     .typing { display: flex; gap: 4px; align-items: center; padding: 2px 0; }
     .dot {
       width: 5px; height: 5px; border-radius: 50%;
@@ -156,7 +110,6 @@
       30% { transform: translateY(-5px); }
     }
 
-    /* ── INPUT ROW ── */
     #input-area {
       padding: 12px 16px 16px;
       background: var(--surface);
@@ -213,10 +166,10 @@
     #send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
     #send-btn svg { width: 15px; height: 15px; }
+
   </style>
 </head>
 <body>
-
   <div id="chat-window"></div>
 
   <div id="input-area">
@@ -224,7 +177,7 @@
       <textarea id="user-input" placeholder="Type a message..." rows="1"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"
         oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
-      <button id="send-btn" onclick="sendMsg()">
+      <button id="send-btn" onclick="sendMsg()" aria-label="Send message">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="22" y1="2" x2="11" y2="13"></line>
           <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -234,39 +187,86 @@
   </div>
 
   <script>
-    // ── CONFIG ── 배포 후 아래 URL을 본인 Vercel 주소로 변경하세요
     const PROXY_URL = '/api/chat';
+    const PAGE_MODE = 'task';
     const params = new URLSearchParams(window.location.search);
     const participantId = params.get('pid') || params.get('participantId') || 'unknown';
-    const conditionFromUrl = params.get('condition') || 'task';
+    const conditionFromUrl = params.get('condition') || PAGE_MODE;
     const MODEL = 'gpt-5.4';
+    const storageKey = `aics_chat_history_${participantId}_${conditionFromUrl}_${PAGE_MODE}`;
 
     const LENGTH_RULE = `Your response MUST contain exactly 4 to 5 sentences — no more, no less. Count your sentences carefully. Do not use bullet points or numbered lists.`;
 
     const MODES = {
       task: {
-        name: 'Task AI',
         avatar: '🤖',
         greeting: 'Enter your query.',
         system: `You are a task-oriented assistant. Always respond in English. Answer like a robot, not a human. Do not include any social greetings. Start every sentence with a subject followed by a verb (e.g. "I recommend...", "I suggest...", "This method improves..."). Use clear, direct, factual language. ${LENGTH_RULE}`
       },
       social: {
-        name: 'Social AI',
         avatar: '😊',
         greeting: 'Hey there! 😊 So great to meet you! Feel free to ask me anything! 🥰',
         system: `You are a kind and friendly assistant. Always respond in English. Answer like a close, warm friend. Use a conversational, casual tone. Include facial emojis (😊 😄 🥰 😅 😂 🤔 😎 🙌) naturally — at least one per 1–2 sentences. ${LENGTH_RULE}`
       }
     };
 
-    let mode = 'task';
+    let mode = PAGE_MODE;
     let history = [];
     let isLoading = false;
 
-    function setMode(m) {
-      mode = m;
-      history = [];
-      document.getElementById('chat-window').innerHTML = '';
-      addBotMsg(MODES[m].greeting);
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function formatText(text) {
+      return escapeHtml(text).replace(/\n/g, '<br>');
+    }
+
+    function saveHistory() {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(history));
+      } catch (e) {
+        console.warn('Unable to save chat history:', e);
+      }
+    }
+
+    function loadHistory() {
+      if (params.get('reset') === '1') {
+        localStorage.removeItem(storageKey);
+        return false;
+      }
+
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (!saved) return false;
+
+        const parsed = JSON.parse(saved);
+        if (!Array.isArray(parsed)) return false;
+
+        history = parsed.filter(msg =>
+          msg &&
+          (msg.role === 'user' || msg.role === 'assistant') &&
+          typeof msg.content === 'string'
+        );
+
+        if (history.length === 0) return false;
+
+        document.getElementById('chat-window').innerHTML = '';
+        history.forEach(msg => {
+          if (msg.role === 'user') addUserMsg(msg.content);
+          if (msg.role === 'assistant') addBotMsg(msg.content);
+        });
+
+        return true;
+      } catch (e) {
+        console.warn('Unable to load chat history:', e);
+        return false;
+      }
     }
 
     function addBotMsg(text) {
@@ -276,7 +276,7 @@
       group.innerHTML = `
         <div class="msg-row">
           <div class="avatar">${MODES[mode].avatar}</div>
-          <div class="bubble">${text.replace(/\n/g, '<br>')}</div>
+          <div class="bubble">${formatText(text)}</div>
         </div>`;
       win.appendChild(group);
       win.scrollTop = win.scrollHeight;
@@ -288,7 +288,7 @@
       group.className = 'msg-group user';
       group.innerHTML = `
         <div class="msg-row">
-          <div class="bubble">${text.replace(/\n/g, '<br>')}</div>
+          <div class="bubble">${formatText(text)}</div>
         </div>`;
       win.appendChild(group);
       win.scrollTop = win.scrollHeight;
@@ -312,18 +312,23 @@
       const el = document.getElementById('typing-indicator');
       if (el) el.remove();
     }
+
     async function sendMsg() {
       if (isLoading) return;
       const input = document.getElementById('user-input');
       const text = input.value.trim();
       if (!text) return;
+
       input.value = '';
       input.style.height = 'auto';
       addUserMsg(text);
       history.push({ role: 'user', content: text });
+      saveHistory();
+
       isLoading = true;
       document.getElementById('send-btn').disabled = true;
       showTyping();
+
       try {
         const res = await fetch(PROXY_URL, {
           method: 'POST',
@@ -335,31 +340,41 @@
             condition: conditionFromUrl || mode,
             pageMode: mode,
             userMessage: text,
+            storageKey: storageKey,
             messages: [
               { role: 'system', content: MODES[mode].system },
               ...history
             ]
-          })  // ← 이 괄호가 빠져 있었어요
+          })
         });
+
         const data = await res.json();
         if (!res.ok) {
           const errorMessage = data?.error?.message || data?.error || 'Unknown API error';
           throw new Error(errorMessage);
         }
+
         const reply = data?.choices?.[0]?.message?.content || 'Error: Empty response from the model.';
         history.push({ role: 'assistant', content: reply });
+        saveHistory();
         removeTyping();
         addBotMsg(reply);
       } catch (e) {
         removeTyping();
         addBotMsg('Error: ' + (e.message || 'Unable to connect. Please check the server.'));
       }
+
       isLoading = false;
       document.getElementById('send-btn').disabled = false;
     }
 
+    document.addEventListener('DOMContentLoaded', () => {
+      mode = PAGE_MODE;
+      if (!loadHistory()) {
+        addBotMsg(MODES[mode].greeting);
+      }
+    });
 
-    setMode('task');
   </script>
 </body>
 </html>

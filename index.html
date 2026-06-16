@@ -4,12 +4,377 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Chatbot</title>
-  <script>
-    const query = window.location.search || '';
-    window.location.replace('/task.html' + query);
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f9f8f6;
+      --surface: #ffffff;
+      --border: #e8e5e0;
+      --border-strong: #c8c4be;
+      --text: #1a1917;
+      --text-muted: #7a776f;
+      --text-hint: #b0ada6;
+      --accent: #1a1917;
+      --user-bg: #1a1917;
+      --user-text: #f9f8f6;
+      --radius: 14px;
+      --radius-sm: 8px;
+      --font: 'DM Sans', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #chat-window {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scroll-behavior: smooth;
+    }
+
+    #chat-window::-webkit-scrollbar { width: 4px; }
+    #chat-window::-webkit-scrollbar-track { background: transparent; }
+    #chat-window::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .msg-group { display: flex; flex-direction: column; gap: 3px; }
+    .msg-group.user { align-items: flex-end; }
+    .msg-group.bot { align-items: flex-start; }
+
+    .msg-row { display: flex; gap: 8px; align-items: flex-end; }
+    .msg-group.user .msg-row { flex-direction: row-reverse; }
+
+    .avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .bubble {
+      max-width: 76%;
+      padding: 10px 14px;
+      font-size: 14px;
+      line-height: 1.65;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow-wrap: anywhere;
+    }
+
+    .msg-group.bot .bubble {
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 4px var(--radius) var(--radius) var(--radius);
+    }
+
+    .msg-group.bot.task .bubble {
+      font-family: var(--font-mono);
+      font-size: 13px;
+    }
+
+    .msg-group.user .bubble {
+      background: var(--user-bg);
+      color: var(--user-text);
+      border-color: var(--user-bg);
+      border-radius: var(--radius) var(--radius) 4px var(--radius);
+    }
+
+    .typing { display: flex; gap: 4px; align-items: center; padding: 2px 0; }
+    .dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--text-hint);
+      animation: bounce 1.2s infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-5px); }
+    }
+
+    #input-area {
+      padding: 12px 16px 16px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    #input-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 8px 8px 14px;
+      transition: border-color 0.15s;
+    }
+
+    #input-row:focus-within { border-color: var(--border-strong); }
+
+    #user-input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-family: var(--font);
+      font-size: 14px;
+      color: var(--text);
+      resize: none;
+      outline: none;
+      min-height: 22px;
+      max-height: 100px;
+      line-height: 1.5;
+    }
+
+    #user-input::placeholder { color: var(--text-hint); }
+
+    #send-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: var(--accent);
+      color: #f9f8f6;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    #send-btn:hover { opacity: 0.85; }
+    #send-btn:active { transform: scale(0.95); }
+    #send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    #send-btn svg { width: 15px; height: 15px; }
+
+  </style>
 </head>
 <body>
-  <p>Redirecting to the chatbot...</p>
+  <div id="chat-window"></div>
+
+  <div id="input-area">
+    <div id="input-row">
+      <textarea id="user-input" placeholder="Type a message..." rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
+      <button id="send-btn" onclick="sendMsg()" aria-label="Send message">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const PROXY_URL = '/api/chat';
+    const PAGE_MODE = 'task';
+    const params = new URLSearchParams(window.location.search);
+    const participantId = params.get('pid') || params.get('participantId') || 'unknown';
+    const conditionFromUrl = params.get('condition') || PAGE_MODE;
+    const MODEL = 'gpt-5.4';
+    const storageKey = `aics_chat_history_${participantId}_${conditionFromUrl}_${PAGE_MODE}`;
+
+    const LENGTH_RULE = `Your response MUST contain exactly 4 to 5 sentences — no more, no less. Count your sentences carefully. Do not use bullet points or numbered lists.`;
+
+    const MODES = {
+      task: {
+        avatar: '🤖',
+        greeting: 'Enter your query.',
+        system: `You are a task-oriented assistant. Always respond in English. Answer like a robot, not a human. Do not include any social greetings. Start every sentence with a subject followed by a verb (e.g. "I recommend...", "I suggest...", "This method improves..."). Use clear, direct, factual language. ${LENGTH_RULE}`
+      },
+      social: {
+        avatar: '😊',
+        greeting: 'Hey there! 😊 So great to meet you! Feel free to ask me anything! 🥰',
+        system: `You are a kind and friendly assistant. Always respond in English. Answer like a close, warm friend. Use a conversational, casual tone. Include facial emojis (😊 😄 🥰 😅 😂 🤔 😎 🙌) naturally — at least one per 1–2 sentences. ${LENGTH_RULE}`
+      }
+    };
+
+    let mode = PAGE_MODE;
+    let history = [];
+    let isLoading = false;
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function formatText(text) {
+      return escapeHtml(text).replace(/\n/g, '<br>');
+    }
+
+    function saveHistory() {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(history));
+      } catch (e) {
+        console.warn('Unable to save chat history:', e);
+      }
+    }
+
+    function loadHistory() {
+      if (params.get('reset') === '1') {
+        localStorage.removeItem(storageKey);
+        return false;
+      }
+
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (!saved) return false;
+
+        const parsed = JSON.parse(saved);
+        if (!Array.isArray(parsed)) return false;
+
+        history = parsed.filter(msg =>
+          msg &&
+          (msg.role === 'user' || msg.role === 'assistant') &&
+          typeof msg.content === 'string'
+        );
+
+        if (history.length === 0) return false;
+
+        document.getElementById('chat-window').innerHTML = '';
+        history.forEach(msg => {
+          if (msg.role === 'user') addUserMsg(msg.content);
+          if (msg.role === 'assistant') addBotMsg(msg.content);
+        });
+
+        return true;
+      } catch (e) {
+        console.warn('Unable to load chat history:', e);
+        return false;
+      }
+    }
+
+    function addBotMsg(text) {
+      const win = document.getElementById('chat-window');
+      const group = document.createElement('div');
+      group.className = `msg-group bot ${mode}`;
+      group.innerHTML = `
+        <div class="msg-row">
+          <div class="avatar">${MODES[mode].avatar}</div>
+          <div class="bubble">${formatText(text)}</div>
+        </div>`;
+      win.appendChild(group);
+      win.scrollTop = win.scrollHeight;
+    }
+
+    function addUserMsg(text) {
+      const win = document.getElementById('chat-window');
+      const group = document.createElement('div');
+      group.className = 'msg-group user';
+      group.innerHTML = `
+        <div class="msg-row">
+          <div class="bubble">${formatText(text)}</div>
+        </div>`;
+      win.appendChild(group);
+      win.scrollTop = win.scrollHeight;
+    }
+
+    function showTyping() {
+      const win = document.getElementById('chat-window');
+      const group = document.createElement('div');
+      group.className = `msg-group bot ${mode}`;
+      group.id = 'typing-indicator';
+      group.innerHTML = `
+        <div class="msg-row">
+          <div class="avatar">${MODES[mode].avatar}</div>
+          <div class="bubble"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+        </div>`;
+      win.appendChild(group);
+      win.scrollTop = win.scrollHeight;
+    }
+
+    function removeTyping() {
+      const el = document.getElementById('typing-indicator');
+      if (el) el.remove();
+    }
+
+    async function sendMsg() {
+      if (isLoading) return;
+      const input = document.getElementById('user-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      input.value = '';
+      input.style.height = 'auto';
+      addUserMsg(text);
+      history.push({ role: 'user', content: text });
+      saveHistory();
+
+      isLoading = true;
+      document.getElementById('send-btn').disabled = true;
+      showTyping();
+
+      try {
+        const res = await fetch(PROXY_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: MODEL,
+            max_completion_tokens: 300,
+            participantId: participantId,
+            condition: conditionFromUrl || mode,
+            pageMode: mode,
+            userMessage: text,
+            storageKey: storageKey,
+            messages: [
+              { role: 'system', content: MODES[mode].system },
+              ...history
+            ]
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          const errorMessage = data?.error?.message || data?.error || 'Unknown API error';
+          throw new Error(errorMessage);
+        }
+
+        const reply = data?.choices?.[0]?.message?.content || 'Error: Empty response from the model.';
+        history.push({ role: 'assistant', content: reply });
+        saveHistory();
+        removeTyping();
+        addBotMsg(reply);
+      } catch (e) {
+        removeTyping();
+        addBotMsg('Error: ' + (e.message || 'Unable to connect. Please check the server.'));
+      }
+
+      isLoading = false;
+      document.getElementById('send-btn').disabled = false;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      mode = PAGE_MODE;
+      if (!loadHistory()) {
+        addBotMsg(MODES[mode].greeting);
+      }
+    });
+
+  </script>
 </body>
 </html>

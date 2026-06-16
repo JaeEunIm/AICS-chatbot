@@ -9,7 +9,8 @@ function doPost(e) {
     data.pageMode || '',
     data.userMessage || '',
     data.botReply || '',
-    data.model || ''
+    data.model || '',
+    data.storageKey || ''
   ]);
 
   return ContentService
