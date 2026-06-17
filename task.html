@@ -68,7 +68,15 @@
       font-size: 15px;
       flex-shrink: 0;
     }
-
+    
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+      display: block;
+    }
+    
     .bubble {
       max-width: 76%;
       padding: 10px 14px;
@@ -199,12 +207,12 @@
 
     const MODES = {
       task: {
-        avatar: '🤖',
+        avatar: 'task-profile.png',
         greeting: 'Enter your query.',
         system: `You are a task-oriented assistant. Always respond in English. Answer like a robot, not a human. Do not include any social greetings. Start every sentence with a subject followed by a verb (e.g. "I recommend...", "I suggest...", "This method improves..."). Use clear, direct, factual language. ${LENGTH_RULE}`
       },
       social: {
-        avatar: '😊',
+        avatar: 'social-profile.png',
         greeting: 'Hey there! 😊 So great to meet you! Feel free to ask me anything! 🥰',
         system: `You are a kind and friendly assistant. Always respond in English. Answer like a close, warm friend. Use a conversational, casual tone. Include facial emojis (😊 😄 🥰 😅 😂 🤔 😎 🙌) naturally — at least one per 1–2 sentences. ${LENGTH_RULE}`
       }
@@ -275,7 +283,9 @@
       group.className = `msg-group bot ${mode}`;
       group.innerHTML = `
         <div class="msg-row">
-          <div class="avatar">${MODES[mode].avatar}</div>
+          <div class="avatar">
+            <img src="${MODES[mode].avatar}" alt="AI avatar" />
+          </div>
           <div class="bubble">${formatText(text)}</div>
         </div>`;
       win.appendChild(group);
@@ -301,7 +311,9 @@
       group.id = 'typing-indicator';
       group.innerHTML = `
         <div class="msg-row">
-          <div class="avatar">${MODES[mode].avatar}</div>
+          <div class="avatar">
+            <img src="${MODES[mode].avatar}" alt="AI avatar" />
+          </div>
           <div class="bubble"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
         </div>`;
       win.appendChild(group);
