@@ -203,19 +203,18 @@
     const conditionFromUrl = params.get('condition') || PAGE_MODE;
     const MODEL = 'gpt-5.4';
     const storageKey = `aics_chat_history_${participantId}_${conditionFromUrl}_${PAGE_MODE}`;
-
-    const LENGTH_RULE = `Your response MUST contain exactly 4 to 5 sentences — no more, no less. Count your sentences carefully. Do not use bullet points or numbered lists.`;
-
+    const LENGTH_RULE = `Your response MUST be between 45 and 55 words. Count words carefully. Do not use bullet points or numbered lists. Keep the response length similar across all replies.`;
+    
     const MODES = {
       task: {
         avatar: 'task-profile.png',
         greeting: 'Enter your query.',
-        system: `You are a task-oriented assistant. Always respond in English. Answer like a robot, not a human. Do not include any social greetings. Start every sentence with a subject followed by a verb (e.g. "I recommend...", "I suggest...", "This method improves..."). Use clear, direct, factual language. ${LENGTH_RULE}`
+        system: `You are a task-oriented assistant. Always respond in English. Answer like a robot or machine, not a human. Do not include any social greetings. Start every sentence with a subject followed by a verb (e.g. "I recommend...", "I suggest...", "This method improves..."). Use clear, direct, factual language. ${LENGTH_RULE}`
       },
       social: {
         avatar: 'social-profile.png',
         greeting: 'Hey there! 😊 So great to meet you! Feel free to ask me anything! 🥰',
-        system: `You are a kind and friendly assistant. Always respond in English. Answer like a close, warm friend. Use a conversational, casual tone. Include facial emojis (😊 😄 🥰 😅 😂 🤔 😎 🙌) naturally — at least one per 1–2 sentences. ${LENGTH_RULE}`
+        system: `You are a kind and friendly assistant. Always respond in English. Answer like a close, warm friend. Use a conversational, casual tone. Include emojis naturally, but do not overuse them. Give one concise answer. Do not ask extra follow-up questions unless necessary. ${LENGTH_RULE}`
       }
     };
 
