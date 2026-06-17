@@ -52,9 +52,9 @@
     .msg-group { display: flex; flex-direction: column; gap: 3px; }
     .msg-group.user { align-items: flex-end; }
     .msg-group.bot { align-items: flex-start; }
-
-    .msg-row { display: flex; gap: 8px; align-items: flex-end; }
-    .msg-group.user .msg-row { flex-direction: row-reverse; }
+    
+    .msg-row { display: flex; gap: 8px; align-items: flex-end; width: 100%; }
+    .msg-group.user .msg-row { flex-direction: row-reverse; justify-content: flex-start; }
 
     .avatar {
       width: 30px;
@@ -84,7 +84,8 @@
       line-height: 1.65;
       border-radius: var(--radius);
       border: 1px solid var(--border);
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
+      word-break: normal;
     }
 
     .msg-group.bot .bubble {
